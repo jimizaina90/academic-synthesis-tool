@@ -131,13 +131,17 @@ with st.sidebar:
     provider = PROVIDER_OPTIONS[provider_label]
     model = st.text_input("Modelo", value=PROVIDER_DEFAULT_MODELS[provider])
     env_name, resolved_key = resolve_api_key(provider)
-    if resolved_key:
+    demo_mode = st.toggle(
+        "Modo demonstração (sem chave API)",
+        value=not bool(resolved_key),
+        help="Serve para testar o fluxo da app sem custos de API.",
+    )
+    if demo_mode:
+        st.info("Demonstração ativa: os resultados são de exemplo (não são análise final).")
+    elif resolved_key:
         st.success(f"Chave encontrada em secrets/ambiente ({env_name}).")
     else:
-        st.warning(
-            f"Falta a chave {env_name}. "
-            "Sem ela, esta app não consegue gerar textos."
-        )
+        st.warning(f"Falta a chave {env_name}.")
 
     st.header("3) Tarefa")
     task_label = st.selectbox("O que queres gerar agora?", options=list(TASK_OPTIONS.keys()))
@@ -177,7 +181,7 @@ uploaded_files = st.file_uploader(
     help="A app processa um ficheiro de cada vez para reduzir uso de memória.",
 )
 
-if not resolved_key:
+if not resolved_key and not demo_mode:
     st.info(
         "Antes de executar: define a chave API no Streamlit secrets ou numa variável de ambiente."
     )
@@ -185,18 +189,20 @@ if not resolved_key:
 run = st.button(
     "Executar",
     type="primary",
-    disabled=not uploaded_files or not resolved_key,
+    disabled=not uploaded_files or (not resolved_key and not demo_mode),
 )
 
 if run and uploaded_files:
     try:
-        llm_config = LLMConfig(
-            provider=provider,
-            model=model,
-            api_key=resolved_key,
-            temperature=temperature,
-            max_output_tokens=max_output_tokens,
-        )
+        llm_config: LLMConfig | None = None
+        if not demo_mode:
+            llm_config = LLMConfig(
+                provider=provider,
+                model=model,
+                api_key=resolved_key,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+            )
 
         with st.status("A ler PDFs e a criar fichas por fonte...", expanded=True) as status:
             documents, source_briefs = build_source_briefs(
@@ -206,6 +212,7 @@ if run and uploaded_files:
                 llm_config=llm_config,
                 chunk_size=chunk_size,
                 overlap=overlap,
+                demo_mode=demo_mode,
             )
             status.update(label="Fichas por fonte concluídas.", state="complete")
 
@@ -239,6 +246,7 @@ if run and uploaded_files:
                     discipline=discipline,
                     user_goal=user_goal,
                     llm_config=llm_config,
+                    demo_mode=demo_mode,
                 )
                 status.update(label="Matriz concluída.", state="complete")
             st.subheader("Convergências e divergências")
@@ -253,6 +261,7 @@ if run and uploaded_files:
                     discipline=discipline,
                     user_goal=user_goal,
                     llm_config=llm_config,
+                    demo_mode=demo_mode,
                 )
                 status.update(label="Narrativa concluída.", state="complete")
             st.subheader("Narrativa")
@@ -267,6 +276,7 @@ if run and uploaded_files:
                     discipline=discipline,
                     user_goal=user_goal,
                     llm_config=llm_config,
+                    demo_mode=demo_mode,
                 )
                 status.update(label="Narrativa base concluída.", state="complete")
 
@@ -278,6 +288,7 @@ if run and uploaded_files:
                     discipline=discipline,
                     user_goal=user_goal,
                     llm_config=llm_config,
+                    demo_mode=demo_mode,
                 )
                 status.update(label="Auditoria concluída.", state="complete")
 

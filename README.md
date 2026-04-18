@@ -29,6 +29,13 @@ Não usa modelos locais.
 7. Abrir no navegador:
    - `http://localhost:8501`
 
+### Teste sem chave API
+
+Se ainda não tiveres chave, liga na barra lateral:
+- **Modo demonstração (sem chave API)**  
+
+Assim consegues testar upload, fluxo e exportação com texto de exemplo.
+
 ## Secrets no Streamlit Community Cloud
 
 No painel da app no Streamlit Cloud, abrir **Settings > Secrets** e colar:
